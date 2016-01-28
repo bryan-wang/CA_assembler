@@ -2,6 +2,9 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:../Lab1/assembler.c">
+   </FileRef>
+   <FileRef
       location = "self:Lab1.xcodeproj">
    </FileRef>
 </Workspace>
