@@ -12,8 +12,19 @@
 #include <limits.h> /* Library for definitions of common variable type characteristics */
 
 #define MAX_LINE_LENGTH 255
+#define NUM_OPCODE 26
 
 enum{DONE, OK, EMPTY_LINE};
+static char *  OPCODE[NUM_OPCODE] = {"add", "and","br","brn","brz","brp","brzp","brnp","brnz","brnzp","jmp","jsr", "jsrr", "ldb", "ldw", "lea", "not", "ret", "rti", "lshf", "rshfl", "rshfa", "stb", "stw", "trap", "xor"};
+
+int isOpcode(char * const ptr){
+	for (int i = 0; i < NUM_OPCODE; i++) {
+		if (strcmp(ptr, OPCODE[i]) == 0) {
+			return 1;
+		}
+	}
+	return 0;
+}
 
 int readAndParse( FILE * pInfile, char * pLine, char ** pLabel, char
              ** pOpcode, char ** pArg1, char ** pArg2, char ** pArg3, char ** pArg4)//Pass by Reference, so it uses char **
@@ -57,6 +68,7 @@ int readAndParse( FILE * pInfile, char * pLine, char ** pLabel, char
 
 
 int main(int argc, char* argv[]) {
+	
     char *prgName = NULL;
     char *oFileName = NULL;
     FILE* infile = NULL;
@@ -64,11 +76,15 @@ int main(int argc, char* argv[]) {
     
     prgName = argv[0];
     oFileName = argv[2];
-    
+	
+	char* op = "brn";
+	printf("%d",isOpcode(op));
+	
     infile = fopen(argv[1], "r");
     printf("program name = '%s'\n", prgName);
     printf("output file name = '%s'\n", oFileName);
     
     fclose(infile);
     fclose(outfile);
+	 
 }
