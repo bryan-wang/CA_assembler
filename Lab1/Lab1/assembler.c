@@ -191,28 +191,57 @@ void check_4bit(int num){
 //***********check_5bit*****************
 // Check whether the number is in the range of 5 bit signed int
 //*************************************************
-void check_5bit(int num){
+int check_5bit(int num){
 	if (num > 16 || num <= -16) {
 		printf("Error: 5 bit number overflow\n");
 	}
+	else
+		if (num < 0) {
+			return num + 32;
+		}
+	return num;
 }
 
 //***********check_6bit*****************
 // Check whether the number is in the range of 6 bit signed int
 //*************************************************
-void check_6bit(int num){
+int check_6bit(int num){
 	if (num > 32 || num <= -32) {
 		printf("Error: 6 bit number overflow\n");
 	}
+	else
+		if (num < 0) {
+			return num + 64;
+		}
+	return num;
 }
 
 //***********check_9bit*****************
 // Check whether the number is in the range of 9 bit signed int
 //*************************************************
-void check_9bit(int num){
+int check_9bit(int num){
 	if (num > 256 || num <= -256) {
 		printf("Error: 9 bit number overflow\n");
 	}
+	else
+		if (num < 0) {
+			return num + 512;
+		}
+	return num;
+}
+
+//***********check_11bit*****************
+// Check whether the number is in the range of 11 bit signed int
+//*************************************************
+int check_11bit(int num){
+	if (num > 1024 || num <= -1024) {
+		printf("Error: 9 bit number overflow\n");
+	}
+	else
+		if (num < 0) {
+			return num + 2048;
+		}
+	return num;
 }
 
 //***********find_table***************************
@@ -229,10 +258,11 @@ int find_label(struct label_addr_table * table, char * label, int current_inst, 
 		printf("Error: Label %s can't find.\n", label);
 	}
 	printf("Origin %d, current %d, instruction \"%s\"\n",label_inst,current_inst,label);
-	return (current_inst - label_inst) > 0 ? current_inst - label_inst - 1 : current_inst - label_inst + 1;
+	//return (current_inst - label_inst) > 0 ? label_inst	- current_inst - 1:label_inst - current_inst - 1 ;
+	return label_inst - current_inst - 1;
 }
 
-//***********check_label_duplicate*****************
+//**********;*check_label_duplicate*****************
 // Check whether the label is in previous label definitions
 //*************************************************
 void check_label_duplicate(struct label_addr_table * table, char * label, int num_label){
@@ -394,7 +424,7 @@ int main(int argc, char* argv[]) {
 					int sr2;
 					if (lArg3[0] == 'x' || lArg3[0] == '#') {
 						sr2 = toNum(lArg3);
-						check_5bit(sr2);
+						sr2 = check_5bit(sr2);
 						if (strcmp(Opcode, "add") == 0) {
 							printf("0x%x\n",0x1000 + (dr<<9) + (sr1<<6) + sr2 + 32);
 						}
@@ -427,34 +457,35 @@ int main(int argc, char* argv[]) {
 				if (*lArg1 != '\0' && *lArg2 == '\0'&& *lArg3 == '\0'&& *lArg4 == '\0') {
 					int offset = 0;
 					offset = find_label(table, lArg1, inst_count, label_count);
+					offset = check_9bit(offset);
 					switch (strlen(Opcode)) {
 						case 2:
-							printf("0x%x\n",offset);
+							printf("0x%x\n",offset + 0x0E00);
 							break;
 						case 3:
 							if (Opcode[2] == 'n') {
-								printf("0x%x\n",offset + 0x8000);
+								printf("0x%x\n",offset + 0x0800);
 							}
 							else if (Opcode[2] == 'z') {
-								printf("0x%x\n",offset + 0x4000);
+								printf("0x%x\n",offset + 0x0400);
 							}
 							else if (Opcode[2] == 'p') {
-								printf("0x%x\n",offset + 0x2000);
+								printf("0x%x\n",offset + 0x0200);
 							}
 							break;
 						case 4:
 							if (Opcode[2] == 'n' && Opcode[3] == 'p') {
-								printf("0x%x\n",offset + 0xA000);
+								printf("0x%x\n",offset + 0x0A00);
 							}
 							else if (Opcode[2] == 'z' && Opcode[3] == 'p') {
-								printf("0x%x\n",offset + 0x6000);
+								printf("0x%x\n",offset + 0x0600);
 							}
 							else if (Opcode[2] == 'n'&& Opcode[3] == 'z') {
-								printf("0x%x\n",offset + 0xC000);
+								printf("0x%x\n",offset + 0x0C00);
 							}
 							break;
 						case 5:
-							printf("0x%x\n",offset + 0xE000);
+							printf("0x%x\n",offset + 0x0E00);
 							break;
 						default:
 							printf("Error: OPCODE Wrong\n");
@@ -485,6 +516,7 @@ int main(int argc, char* argv[]) {
 				if (*lArg1 != '\0' && *lArg2 == '\0'&& *lArg3 == '\0'&& *lArg4 == '\0'){
 					if (Opcode[3]  == '\0'){
 						int offset = find_label(table, lArg1, inst_count, label_count);
+						offset = check_11bit(offset);
 						printf("0x%x\n",offset + 0x4800);
 					}
 					else{
@@ -501,7 +533,7 @@ int main(int argc, char* argv[]) {
 					int dr = read_reg(lArg1);
 					int baser = read_reg(lArg2);
 					int offset6 = toNum(lArg3);
-					check_6bit(offset6);
+					offset6 = check_6bit(offset6);
 					if (Opcode[2] == 'b') {
 						printf("0x%x\n",(dr << 9) + (baser << 6) + 0x2000 + offset6);
 					}
@@ -518,7 +550,7 @@ int main(int argc, char* argv[]) {
 				if (*lArg1 != '\0' && *lArg2 != '\0'&& *lArg3 == '\0'&& *lArg4 == '\0'){
 					int dr = read_reg(lArg1);
 					int offset9 = find_label(table, lArg2, inst_count, label_count);;
-					check_9bit(offset9);
+					offset9 = check_9bit(offset9);
 					printf("0x%x\n",(dr << 9) + 0xE000 + offset9);
 				}
 				else
@@ -578,7 +610,7 @@ int main(int argc, char* argv[]) {
 					int sr = read_reg(lArg1);
 					int baser = read_reg(lArg2);
 					int offset6 = toNum(lArg3);
-					check_6bit(offset6);
+					offset6 = check_6bit(offset6);
 					if (Opcode[2] == 'b') {
 						printf("0x%x\n",(sr << 9) + (baser << 6) + 0x3000 + offset6);
 					}
