@@ -95,7 +95,7 @@ int toNum( char * pStr ){
 			lNum = -lNum;
 			return lNum;
 			}
-		else if( *pStr == 'x' ) /* hex */
+		else if( *pStr == 'x' || *pStr == 'X') /* hex */
 		{
 			pStr++;
 			if( *pStr == '-') /* hex is negative */
@@ -142,6 +142,9 @@ void check_label(char * label){
 	if(strcmp(label, "in") == 0 || strcmp(label, "out") == 0 || strcmp(label, "getc") == 0 ||strcmp(label, "puts") == 0){
 		printf("Error: Label name can't contain in/out/getc/puts\n"); //Error 4
 	}
+	if (strlen(label) == 2 && label[0] == 'r' && (label[1] < 8 && label[1]>=0 )) {
+		printf("Error, label cannot be a name of Register\n");
+	}
 	for (int i = 0;i < strlen(label);i++){
 		if (isalnum(label[i]) == 0) { //isalnum == 0 -> not a alphanumeric value
 			printf("Error: Label name can only contain alphanumeric chars\n"); //Error 4
@@ -155,10 +158,10 @@ void check_label(char * label){
 int read_reg(char * reg){
 	int reg_num = atoi(&reg[1]);
 	if (reg[0] != 'r') {
-		printf("Error: Wrong Register name");
+		printf("Error: Wrong Register name\n");
 	}
 	if (reg[2] != '\0' || reg_num > 7) {
-		printf("Error: Reg too large");
+		printf("Error: Reg too large\n");
 	}
 	return reg_num;
 }
@@ -175,7 +178,7 @@ int check_word_align(int num){// 1-> odd, not align
 //*************************************************
 void check_8bit(int num){
 	if (num > 255 || num < 0) {
-		printf("Error: 8 bit unsigned number overflow\n");
+		printf("Error: 8 bit unsigned number overflow\n"); //Error 3
 	}
 }
 
@@ -184,7 +187,7 @@ void check_8bit(int num){
 //*************************************************
 void check_4bit(int num){
 	if (num > 15 || num < 0) {
-		printf("Error: 4 bit unsigned number overflow\n");
+		printf("Error: 4 bit unsigned number overflow\n"); //Error 3
 	}
 }
 
@@ -192,7 +195,7 @@ void check_4bit(int num){
 // Check whether the number is in the range of 5 bit signed int
 //*************************************************
 int check_5bit(int num){
-	if (num > 16 || num <= -16) {
+	if (num >= 16 || num < -16) {
 		printf("Error: 5 bit number overflow\n");
 	}
 	else
@@ -206,7 +209,7 @@ int check_5bit(int num){
 // Check whether the number is in the range of 6 bit signed int
 //*************************************************
 int check_6bit(int num){
-	if (num > 32 || num <= -32) {
+	if (num >= 32 || num < -32) {
 		printf("Error: 6 bit number overflow\n");
 	}
 	else
@@ -220,7 +223,7 @@ int check_6bit(int num){
 // Check whether the number is in the range of 9 bit signed int
 //*************************************************
 int check_9bit(int num){
-	if (num > 256 || num <= -256) {
+	if (num >= 256 || num < -256) {
 		printf("Error: 9 bit number overflow\n");
 	}
 	else
@@ -234,7 +237,7 @@ int check_9bit(int num){
 // Check whether the number is in the range of 11 bit signed int
 //*************************************************
 int check_11bit(int num){
-	if (num > 1024 || num <= -1024) {
+	if (num >= 1024 || num < -1024) {
 		printf("Error: 9 bit number overflow\n");
 	}
 	else
@@ -255,7 +258,7 @@ int find_label(struct label_addr_table * table, char * label, int current_inst, 
 		}
 	}
 	if (label_inst == 0) {
-		printf("Error: Label %s can't find.\n", label);
+		printf("Error: Label %s can't find.\n", label);//Error 1
 	}
 	printf("Origin %d, current %d, instruction \"%s\"\n",label_inst,current_inst,label);
 	//return (current_inst - label_inst) > 0 ? label_inst	- current_inst - 1:label_inst - current_inst - 1 ;
@@ -268,7 +271,7 @@ int find_label(struct label_addr_table * table, char * label, int current_inst, 
 void check_label_duplicate(struct label_addr_table * table, char * label, int num_label){
 	for (int i = 0; i < num_label; i++) {
 		if(strcmp(table[i].label, label) == 0){
-			printf("Error: label duplicate in the table.\n");
+			printf("Error: label duplicate in the table.\n"); //Error 4
 		}
 	}
 }
@@ -303,7 +306,9 @@ int readAndParse( FILE * pInfile, char * pLine, char ** pLabel, char
 			*pLabel = lPtr;
 			if( !( lPtr = strtok( NULL, "\t\n ," ) ) ) return( OK );
 		}
-    
+	if (isOpcode(lPtr) == -1 && isPseudoOp(lPtr) == -1) {
+		printf("Error: opcode %s is not defined\n",lPtr);//Error 2
+	}
 	*pOpcode = lPtr;
 	if( !( lPtr = strtok( NULL, "\t\n ," ) ) ) return( OK );
 	*pArg1 = lPtr;
@@ -359,6 +364,9 @@ int main(int argc, char* argv[]) {
 			if (lArg4) printf("Arg 4 : %s\n\n",lArg4);
 			//printf("PSEUDO_OP is %d\n",(lLable == NULL) );
 			check_label(lLable);
+			if (*Opcode == '\0') {
+				printf("Error: invalid opcode\n");//Error 2
+			}
 			if (*lLable == '\0' && isPseudoOp(Opcode) == 0 ) {
 				if (origin_mem_addr != 0 || !*lArg1 || *lArg2 || *lArg3 || *lArg4) {
 					printf("Error: .Orig Syntax \n");
@@ -366,24 +374,27 @@ int main(int argc, char* argv[]) {
 				}
 				else {
 					int tmpaddr = toNum(lArg1);
-					if (tmpaddr > UINT16_MAX) {
-						printf("Error: Address is Out of 16 bit Memory. \n");
+					if (tmpaddr > UINT16_MAX || tmpaddr < 0) {
+						printf("Error: Address is Out of 16 bit Memory.\n");//Error 3
 					}
 					if(check_word_align(tmpaddr)){
-						printf("Error: Not word alignment");
+						printf("Error: Not word alignment\n");//Error 3
 					}
 					else{
 						origin_mem_addr = tmpaddr;
-						printf("Start Addr : 0x%X\n",origin_mem_addr);
+						printf("Start Addr : 0x%04x\n",origin_mem_addr);
 					}
 				}
 			}
-			if (*lLable != '\0' && isPseudoOp(Opcode) == 2 ) {
-				if ( *lArg1 == '\0' || *lArg2 == '\0' || *lArg3 == '\0' || *lArg4 == '\0')
+			if (inst_count > 0 && origin_mem_addr == 0) {
+				printf("Error, ORIG syntax error\n");
+			}
+			if (isPseudoOp(Opcode) == 2 ) {
+				if ( *lArg1 != '\0' || *lArg2 != '\0' || *lArg3 != '\0' || *lArg4 != '\0'|| *lLable != '\0')
 					printf("Error END Syntax \n");
 				else{
 					lRet = DONE;
-					printf(".END command = End of Program. Exiting...\n");
+					//printf(".END command = End of Program. Exiting...\n");
 				}
 			}
 			if(*lLable){
@@ -407,18 +418,32 @@ int main(int argc, char* argv[]) {
 		if(lRet != DONE && lRet != EMPTY_LINE){
 			//.ORIG
 			if(isPseudoOp(Opcode) == 0){
-				printf("Ox%x\n",origin_mem_addr);
+				printf("Ox%04x\n",origin_mem_addr);
 			}
 			//.FILL
 			else if (isPseudoOp(Opcode) == 1) {
-				printf("0x%x\n",toNum(lArg1));
+				if (*lArg1 != '\0' && *lArg2 == '\0' && *lArg3 == '\0' && *lArg4 == '\0') {
+					int fill_inst = toNum(lArg1);
+					if (fill_inst > UINT16_MAX || fill_inst < -	UINT16_MAX/2) {
+						printf("Error: argument larger than 16bit addr space\n");
+					}
+					printf("0x%04x\n",fill_inst);
+				}
+				else{
+					printf("Error, missing operand .fill\n");//Error 4
+				}
 			}
 			//.END
 			else if (isPseudoOp(Opcode) == 2) {
-				lRet = DONE;
+				if (*lArg1 == '\0' && *lArg2 == '\0' && *lArg3 == '\0' && *lArg4 == '\0') {
+					lRet = DONE;
+				}
+				else{
+					printf("Error, missing operand .end\n");//Error 4
+				}
 			}
 			else if(strcmp(Opcode, "add") == 0 || strcmp(Opcode, "and") == 0 || strcmp(Opcode, "xor") == 0){
-				if (*lArg1 != '\0' && *lArg2 != '\0' && *lArg3 != '\0') {
+				if (*lArg1 != '\0' && *lArg2 != '\0' && *lArg3 != '\0' && *lArg4 == '\0') {
 					int dr = read_reg(lArg1);
 					int sr1 = read_reg(lArg2);
 					int sr2;
@@ -426,31 +451,32 @@ int main(int argc, char* argv[]) {
 						sr2 = toNum(lArg3);
 						sr2 = check_5bit(sr2);
 						if (strcmp(Opcode, "add") == 0) {
-							printf("0x%x\n",0x1000 + (dr<<9) + (sr1<<6) + sr2 + 32);
+							printf("0x%04x\n",0x1000 + (dr<<9) + (sr1<<6) + sr2 + 32);
 						}
 						else if (strcmp(Opcode, "and") == 0){
-							printf("0x%x\n",0x5000 + (dr<<9) + (sr1<<6) + sr2 + 32);
+							printf("0x%04x\n",0x5000 + (dr<<9) + (sr1<<6) + sr2 + 32);
 						}
 						else if (strcmp(Opcode, "xor") == 0){
-							printf("0x%x\n",0x9000 + (dr<<9) + (sr1<<6) + sr2 + 32);
+							printf("0x%04x\n",0x9000 + (dr<<9) + (sr1<<6) + sr2 + 32);
 						}
 						
 					}
 					else{
 						sr2 = read_reg(lArg3);
 						if (strcmp(Opcode, "add") == 0) {
-							printf("0x%x\n",0x1000 + (dr<<9) + (sr1<<6) + sr2);
+							printf("0x%04x\n",0x1000 + (dr<<9) + (sr1<<6) + sr2);
 						}
 						else if (strcmp(Opcode, "and") == 0){
-							printf("0x%x\n",0x5000 + (dr<<9) + (sr1<<6) + sr2);
+							printf("0x%04x\n",0x5000 + (dr<<9) + (sr1<<6) + sr2);
 						}
 						else if (strcmp(Opcode, "xor") == 0){
-							printf("0x%x\n",0x9000 + (dr<<9) + (sr1<<6) + sr2);
+							printf("0x%04x\n",0x9000 + (dr<<9) + (sr1<<6) + sr2);
 						}
 					}
 				}
-				else
-					printf("Error: Wrong Syntax for and/and/xor");
+				else{
+					printf("Error: Wrong Syntax for and/and/xor\n");
+				}
 			}
 			
 			else if(strncmp(Opcode, "br", 2) == 0){
@@ -460,32 +486,32 @@ int main(int argc, char* argv[]) {
 					offset = check_9bit(offset);
 					switch (strlen(Opcode)) {
 						case 2:
-							printf("0x%x\n",offset + 0x0E00);
+							printf("0x%04x\n",offset + 0x0E00);
 							break;
 						case 3:
 							if (Opcode[2] == 'n') {
-								printf("0x%x\n",offset + 0x0800);
+								printf("0x%04x\n",offset + 0x0800);
 							}
 							else if (Opcode[2] == 'z') {
-								printf("0x%x\n",offset + 0x0400);
+								printf("0x%04x\n",offset + 0x0400);
 							}
 							else if (Opcode[2] == 'p') {
-								printf("0x%x\n",offset + 0x0200);
+								printf("0x%04x\n",offset + 0x0200);
 							}
 							break;
 						case 4:
 							if (Opcode[2] == 'n' && Opcode[3] == 'p') {
-								printf("0x%x\n",offset + 0x0A00);
+								printf("0x%04x\n",offset + 0x0A00);
 							}
 							else if (Opcode[2] == 'z' && Opcode[3] == 'p') {
-								printf("0x%x\n",offset + 0x0600);
+								printf("0x%04x\n",offset + 0x0600);
 							}
 							else if (Opcode[2] == 'n'&& Opcode[3] == 'z') {
-								printf("0x%x\n",offset + 0x0C00);
+								printf("0x%04x\n",offset + 0x0C00);
 							}
 							break;
 						case 5:
-							printf("0x%x\n",offset + 0x0E00);
+							printf("0x%04x\n",offset + 0x0E00);
 							break;
 						default:
 							printf("Error: OPCODE Wrong\n");
@@ -493,15 +519,15 @@ int main(int argc, char* argv[]) {
 					}
 				}
 				else
-					printf("Error: Wrong Syntax for br");
+					printf("Error: Wrong Syntax for br\n");
 			}
 			else if(strcmp(Opcode, "jmp") == 0){
 				if (*lArg1 != '\0' && *lArg2 == '\0'&& *lArg3 == '\0'&& *lArg4 == '\0'){
 					int baser = read_reg(lArg1);
-					printf("0x%x\n",(baser << 6) + 0xC000);
+					printf("0x%04x\n",(baser << 6) + 0xC000);
 				}
 				else
-					printf("Error: Wrong Syntax for jmp");
+					printf("Error: Wrong Syntax for jmp\n");
 				
 			}
 			else if(strcmp(Opcode, "ret") == 0){
@@ -509,7 +535,7 @@ int main(int argc, char* argv[]) {
 					printf("0xC1C0\n");
 				}
 				else
-					printf("Error: Wrong Syntax for ret");
+					printf("Error: Wrong Syntax for ret\n");
 				
 			}
 			else if(strncmp(Opcode, "jsr",3) == 0){
@@ -517,15 +543,15 @@ int main(int argc, char* argv[]) {
 					if (Opcode[3]  == '\0'){
 						int offset = find_label(table, lArg1, inst_count, label_count);
 						offset = check_11bit(offset);
-						printf("0x%x\n",offset + 0x4800);
+						printf("0x%04x\n",offset + 0x4800);
 					}
 					else{
 						int baser = read_reg(lArg1);
-						printf("0x%x\n",(baser << 6) + 0x4000);
+						printf("0x%04x\n",(baser << 6) + 0x4000);
 					}
 				}
 				else
-					printf("Error: Wrong Syntax for jsr/jsrr");
+					printf("Error: Wrong Syntax for jsr/jsrr\n");
 				
 			}
 			else if(strncmp(Opcode, "ld" , 2) == 0){
@@ -535,15 +561,15 @@ int main(int argc, char* argv[]) {
 					int offset6 = toNum(lArg3);
 					offset6 = check_6bit(offset6);
 					if (Opcode[2] == 'b') {
-						printf("0x%x\n",(dr << 9) + (baser << 6) + 0x2000 + offset6);
+						printf("0x%04x\n",(dr << 9) + (baser << 6) + 0x2000 + offset6);
 					}
 					else if(Opcode[2] == 'w'){
-						printf("0x%x\n",(dr << 9) + (baser << 6) + 0x6000 + offset6);
+						printf("0x%04x\n",(dr << 9) + (baser << 6) + 0x6000 + offset6);
 					}
 					
 				}
 				else
-					printf("Error: Wrong Syntax for ldb/ldw");
+					printf("Error: Wrong Syntax for ldb/ldw\n");
 				
 			}
 			else if(strcmp(Opcode, "lea") == 0){
@@ -551,20 +577,20 @@ int main(int argc, char* argv[]) {
 					int dr = read_reg(lArg1);
 					int offset9 = find_label(table, lArg2, inst_count, label_count);;
 					offset9 = check_9bit(offset9);
-					printf("0x%x\n",(dr << 9) + 0xE000 + offset9);
+					printf("0x%04x\n",(dr << 9) + 0xE000 + offset9);
 				}
 				else
-					printf("Error: Wrong Syntax for lea");
+					printf("Error: Wrong Syntax for lea\n");
 				
 			}
 			else if(strcmp(Opcode, "not") == 0){
 				if (*lArg1 != '\0' && *lArg2 != '\0'&& *lArg3 == '\0'&& *lArg4 == '\0'){
 					int dr = read_reg(lArg1);
 					int sr = read_reg(lArg2);
-					printf("0x%x\n",(dr << 9) + (sr << 6) + 0x903F);
+					printf("0x%04x\n",(dr << 9) + (sr << 6) + 0x903F);
 				}
 				else
-					printf("Error: Wrong Syntax for not");
+					printf("Error: Wrong Syntax for not\n");
 				
 			}
 			else if(strcmp(Opcode, "rti") == 0){
@@ -572,7 +598,7 @@ int main(int argc, char* argv[]) {
 					printf("0x8000\n");
 				}
 				else
-					printf("Error: Wrong Syntax for rti");
+					printf("Error: Wrong Syntax for rti\n");
 				
 			}
 			else if(strcmp(Opcode, "lshf") == 0){
@@ -581,11 +607,11 @@ int main(int argc, char* argv[]) {
 					int sr = read_reg(lArg2);
 					int amount4 = toNum(lArg3);
 					check_4bit(amount4);
-					printf("0x%x\n",(dr << 9) + (sr << 6) + 0xD000 + amount4);
+					printf("0x%04x\n",(dr << 9) + (sr << 6) + 0xD000 + amount4);
 					
 				}
 				else
-					printf("Error: Wrong Syntax for lshf");
+					printf("Error: Wrong Syntax for lshf\n");
 				
 			}
 			else if(strncmp(Opcode, "rshf" , 4) == 0){
@@ -595,14 +621,14 @@ int main(int argc, char* argv[]) {
 					int amount4 = toNum(lArg3);
 					check_4bit(amount4);
 					if (Opcode[4] == 'l') {
-						printf("0x%x\n",(dr << 9) + (sr << 6) + 0xD010 + amount4);
+						printf("0x%04x\n",(dr << 9) + (sr << 6) + 0xD010 + amount4);
 					}
 					else if(Opcode[4] == 'a'){
-						printf("0x%x\n",(dr << 9) + (sr << 6) + 0xD030 + amount4);
+						printf("0x%04x\n",(dr << 9) + (sr << 6) + 0xD030 + amount4);
 					}
 				}
 				else
-					printf("Error: Wrong Syntax for rshfa/rshfl");
+					printf("Error: Wrong Syntax for rshfa/rshfl\n");
 				
 			}
 			else if(strncmp(Opcode, "st" , 2) == 0){
@@ -612,30 +638,55 @@ int main(int argc, char* argv[]) {
 					int offset6 = toNum(lArg3);
 					offset6 = check_6bit(offset6);
 					if (Opcode[2] == 'b') {
-						printf("0x%x\n",(sr << 9) + (baser << 6) + 0x3000 + offset6);
+						printf("0x%04x\n",(sr << 9) + (baser << 6) + 0x3000 + offset6);
 					}
 					else if(Opcode[2] == 'w'){
-						printf("0x%x\n",(sr << 9) + (baser << 6) + 0x7000 + offset6);
+						printf("0x%04x\n",(sr << 9) + (baser << 6) + 0x7000 + offset6);
 					}
 					
 				}
 				else
-					printf("Error: Wrong Syntax for stb/stw");
+					printf("Error: Wrong Syntax for stb/stw\n");
 				
 			}
 			else if(strcmp(Opcode, "trap") == 0){
 				if (*lArg1 != '\0' && *lArg2 == '\0'&& *lArg3 == '\0'&& *lArg4 == '\0'){
+					if (lArg1[0] != 'x' || lArg1[0] != 'X') {
+						printf("Error, trap vector should be a hex.\n");
+					}
 					int trap_vector8 = toNum(lArg1);
 					check_8bit(trap_vector8);
-					printf("0x%x\n",0xF000 + trap_vector8);
+					printf("0x%04x\n",0xF000 + trap_vector8);
 				}
 				else
-					printf("Error: Wrong Syntax for trap");
+					printf("Error: Wrong Syntax for trap\n");
+				
+			}
+			else if(strcmp(Opcode, "halt") == 0){
+				if (*lArg1 == '\0' && *lArg2 == '\0'&& *lArg3 == '\0'&& *lArg4 == '\0'){
+					printf("0x%04x\n",0xF025);
+				}
+				else
+					printf("Error: Wrong Syntax for halt\n");
+				
+			}
+			else if(strcmp(Opcode, "nop") == 0){
+				if (*lArg1 == '\0' && *lArg2 == '\0'&& *lArg3 == '\0'&& *lArg4 == '\0'){
+					printf("0x%04x\n",0x0000);
+				}
+				else
+					printf("Error: Wrong Syntax for nop\n");
 				
 			}
 			
+			
 		
 		}
+		
+		if (isPseudoOp(Opcode) != 2 && lRet == DONE) {
+			printf("Error, no end for the program\n");
+		}
+		
 	}
 	while (lRet != DONE);
 	
