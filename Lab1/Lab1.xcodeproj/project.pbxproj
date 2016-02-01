@@ -209,6 +209,8 @@
 		D10D794C1C5ACDF600CE0E05 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_C_LANGUAGE_STANDARD = ansi;
+				OTHER_CFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -216,6 +218,8 @@
 		D10D794D1C5ACDF600CE0E05 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_C_LANGUAGE_STANDARD = ansi;
+				OTHER_CFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
